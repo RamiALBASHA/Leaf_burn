@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "leaf_burn"
+version = "0.0.1"
+authors = [
+  { name="Rami ALBASHA", email="rami.albasha@inrae.fr" },
+  { name="Adriaan WESTGEEST", email="adriaan.westgeest@supagro.fr"},
+]
+maintainers = [
+  { name="Rami ALBASHA", email="rami.albasha@inrae.fr" },
+  { name="Adriaan WESTGEEST", email="adriaan.westgeest@supagro.fr"}
+]
+
+description = "Simulating leaf temperature of potted grapevines during the heat spell on june 29th 2019 in The South of France"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: CeCILL",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/awestgeest/Leaf_burn"
+"Bug Tracker" = "https://github.com/awestgeest/Leaf_burn/issues"
