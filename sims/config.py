@@ -1,3 +1,8 @@
+from json import load
+
+from pathlib import Path
+
+
 class Pot:
     def __init__(self):
         self.height = 23  # cm
@@ -14,3 +19,8 @@ class Config:
         self.row_angle_with_sout: float = 140
         self.leaf_height_attribute: str = 'TopPosition'
         self.extinction_coefficient_wind: float = 0.5
+
+        with open(self.path_root / 'params.json', mode='r') as f:
+            self.params = load(f)
+        self.params['planting']['spacing_on_row'] = self.spacing_on_row / 100.
+        self.params['planting']['spacing_between_rows'] = self.spacing_between_rows / 100.
