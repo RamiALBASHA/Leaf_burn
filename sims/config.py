@@ -13,6 +13,11 @@ class Pot:
 
 class Config:
     def __init__(self):
+        self.path_root = Path(__file__).parent
+        self.path_digit = self.path_root / 'source/digit'
+        self.path_weather = self.path_root / 'source/weather.csv'
+        self.path_preprocessed_data = self.path_root / 'preprocessed_data'
+
         self.unit_digit: str = 'cm'
         self.spacing_between_rows: float = 100  # cm
         self.spacing_on_row: float = Pot().radius_upper * 2.  # cm
