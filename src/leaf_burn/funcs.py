@@ -120,7 +120,7 @@ def calc_local_air_temperature(height: float, temperature_air_ref: float, temper
     return temperature_ground - log(max(1.e-6, height) / 1.e-6) / 14.604 * (temperature_ground - temperature_air_ref)
 
 
-def set_temperature_profile(g: mtg.MTG, temperature_air_ref: float, temperature_ground: float) -> mtg.MTG:
+def set_air_temperature_profile(g: mtg.MTG, temperature_air_ref: float, temperature_ground: float) -> mtg.MTG:
     """Sets air temperature through the canopy
 
     Args:
