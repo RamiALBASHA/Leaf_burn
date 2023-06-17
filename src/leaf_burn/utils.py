@@ -24,7 +24,7 @@ def copy_mtg(g: MTG) -> MTG:
     return g_copy
 
 
-def extract_mtg(g: MTG, plant_id: int) -> MTG:
+def extract_mtg(g: MTG, plant_id: str) -> MTG:
     g_single = copy_mtg(g=g)
 
     branch_vid_to_remove = [vid for vid in g.VtxList(Scale=1) if g.node(vid).label != f'plant{plant_id}']
