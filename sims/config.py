@@ -17,6 +17,7 @@ class Config:
         self.path_digit = self.path_root / 'source/digit'
         self.path_weather = self.path_root / 'source/weather.csv'
         self.path_preprocessed_data = self.path_root / 'preprocessed_data'
+        self.path_output_dir = self.path_root / 'output'
 
         self.unit_digit: str = 'cm'
         self.spacing_between_rows: float = 100  # cm
