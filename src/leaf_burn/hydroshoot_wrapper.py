@@ -3,16 +3,18 @@ from datetime import datetime
 from pathlib import Path
 
 import numpy as np
-from archi_panel.simulator import initialisation_twins
-from archi_panel.utils import copy_mtg, extract_mtg
 from hydroshoot import (architecture, solver, io)
 from hydroshoot.energy import calc_effective_sky_temperature
 from openalea.mtg.mtg import MTG
 from openalea.plantgl.all import Scene, surface
 from pandas import DataFrame
 
+from leaf_burn import initialisation_twins
+from leaf_burn.utils import copy_mtg, extract_mtg
 
-def run(g: MTG, wd: Path, params: dict = None, plant_id: int = None, scene: Scene = None, is_write_result: bool = True,
+
+def run(g: MTG, wd: Path, path_weather: Path, params: dict = None,
+        plant_id: str = None, scene: Scene = None, is_write_result: bool = True,
         is_write_mtg: bool = False, path_output: Path = None, **kwargs) -> DataFrame:
     """Calculates leaf gas and energy exchange in addition to the hydraulic structure of an individual plant.
 
@@ -50,6 +52,7 @@ def run(g: MTG, wd: Path, params: dict = None, plant_id: int = None, scene: Scen
     # ==============================================================================
     inputs = io.HydroShootInputs(
         path_project=wd,
+        path_weather=path_weather,
         user_params=params,
         scene=scene,
         is_nitrogen_calculated='Na' in g.property_names(),
@@ -69,7 +72,7 @@ def run(g: MTG, wd: Path, params: dict = None, plant_id: int = None, scene: Scen
     g = extract_mtg(g, plant_id=plant_id)
 
     g, g_clone = initialisation_twins.init_model(g=g, g_clone=g_clone, inputs=inputs)
-
+    calc_collar_water_potential = initialisation_twins.set_collar_water_potential_function(params=params)
     # ==============================================================================
     # Simulations
     # ==============================================================================
@@ -100,7 +103,8 @@ def run(g: MTG, wd: Path, params: dict = None, plant_id: int = None, scene: Scen
 
         solver.solve_interactions(
             g=g, meteo=inputs_hourly.weather.loc[date], psi_soil=inputs_hourly.psi_soil,
-            t_soil=inputs_hourly.soil_temperature, t_sky_eff=inputs_hourly.sky_temperature, params=params)
+            t_soil=inputs_hourly.soil_temperature, t_sky_eff=inputs_hourly.sky_temperature, params=params,
+            calc_collar_water_potential=calc_collar_water_potential)
 
         # Write mtg to an external file
         if is_write_mtg and scene is not None:

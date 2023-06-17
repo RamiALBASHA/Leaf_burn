@@ -1,33 +1,41 @@
 from datetime import datetime
+from typing import Callable
 from typing import Tuple
 
+from hydroshoot import soil
 from hydroshoot.architecture import add_soil_surface_mesh, get_leaves, get_mtg_base
 from hydroshoot.energy import set_form_factors_simplified
-from hydroshoot.initialisation import (remove_stem_geometry, add_rhyzosphere_concentric_cylinders, traversal,
-                                       calc_nitrogen_distribution, set_photosynthetic_capacity)
+from hydroshoot.initialisation import (remove_stem_geometry, traversal, calc_nitrogen_distribution,
+                                       set_photosynthetic_capacity)
 from hydroshoot.io import HydroShootInputs, HydroShootHourlyInputs
 from hydroshoot.irradiance import irradiance_distribution, hsCaribu, set_optical_properties
 from hydroshoot.params import Params
 from openalea.mtg.mtg import MTG
 
-from leaf_burn.funcs import set_wind_speed_profile, set_temperature_profile
+from leaf_burn.funcs import set_wind_speed_profile, set_air_temperature_profile
+
+
+def set_collar_water_potential_function(params: Params, **kwargs) -> Callable:
+    if params.soil.is_rhyzo_solution:
+        def func(transpiration: float, soil_water_potential: float, **kwargs) -> float:
+            return soil.calc_collar_water_potential(
+                transpiration=transpiration,
+                bulk_soil_water_potential=soil_water_potential,
+                rhyzosphere_volume=params.soil.rhyzo_volume,
+                soil_class=params.soil.soil_class,
+                root_radius=params.soil.avg_root_radius,
+                root_length=params.soil.root_length)
+    else:
+        def func(soil_water_potential: float, **kwargs):
+            return soil_water_potential
+    return func
 
 
 def init_model(g: MTG, g_clone: MTG, inputs: HydroShootInputs) -> Tuple[MTG, MTG]:
     params = inputs.params
-    g.node(g.root).vid_collar = get_mtg_base(g, vtx_label=params.mtg_api.collar_label)
-    g.node(g.root).vid_base = g.node(g.root).vid_collar
-
-    # Add rhyzosphere concentric cylinders
-    if params.soil.rhyzo_solution:
-        if not any(item.startswith('rhyzo') for item in g.property('label').values()):
-            g = add_rhyzosphere_concentric_cylinders(
-                g=g,
-                cylinders_radii=params.soil.rhyzo_radii,
-                soil_dimensions=params.soil.soil_dimensions,
-                soil_class=params.soil.soil_class,
-                vtx_label=params.mtg_api.collar_label,
-                length_conv=1. / params.simulation.conv_to_meter)
+    vid_collar = get_mtg_base(g, vtx_label=params.mtg_api.collar_label)
+    g.node(g.root).vid_collar = vid_collar
+    g.node(g.root).vid_base = vid_collar
 
     # Add form factors
     if params.simulation.is_energy_budget:
@@ -59,24 +67,25 @@ def init_model(g: MTG, g_clone: MTG, inputs: HydroShootInputs) -> Tuple[MTG, MTG
         g = add_soil_surface_mesh(g=g, side_length=side_length)
         g_clone = add_soil_surface_mesh(g=g_clone, side_length=side_length)
 
-    # Remove undesired geometry for light and energy calculations
     if not inputs.is_ppfd_interception_calculated:
-        remove_stem_geometry(g)
-        remove_stem_geometry(g_clone)
+        # Remove undesired geometry for light and energy calculations
+        if not inputs.is_ppfd_interception_calculated:
+            remove_stem_geometry(g)
+            remove_stem_geometry(g_clone)
 
-    # Attach optical properties to MTG elements
-    g = set_optical_properties(
-        g=g,
-        wave_band='SW',
-        leaf_lbl_prefix=params.mtg_api.leaf_lbl_prefix,
-        stem_lbl_prefix=params.mtg_api.stem_lbl_prefix,
-        opt_prop=params.irradiance.opt_prop)
-    g_clone = set_optical_properties(
-        g=g_clone,
-        wave_band='SW',
-        leaf_lbl_prefix=params.mtg_api.leaf_lbl_prefix,
-        stem_lbl_prefix=params.mtg_api.stem_lbl_prefix,
-        opt_prop=params.irradiance.opt_prop)
+        # Attach optical properties to MTG elements
+        g = set_optical_properties(
+            g=g,
+            wave_band='SW',
+            leaf_lbl_prefix=params.mtg_api.leaf_lbl_prefix,
+            stem_lbl_prefix=params.mtg_api.stem_lbl_prefix,
+            opt_prop=params.irradiance.opt_prop)
+        g_clone = set_optical_properties(
+            g=g_clone,
+            wave_band='SW',
+            leaf_lbl_prefix=params.mtg_api.leaf_lbl_prefix,
+            stem_lbl_prefix=params.mtg_api.stem_lbl_prefix,
+            opt_prop=params.irradiance.opt_prop)
 
     # Calculate leaf Nitrogen per unit surface area according to Prieto et al. (2012)
     if 'Na' not in g.property_names():
@@ -106,10 +115,14 @@ def init_hourly(g: MTG, g_clone: MTG, inputs_hourly: HydroShootHourlyInputs, lea
     # Add a date index to g
     g.date = datetime.strftime(inputs_hourly.date, "%Y%m%d%H%M%S")
 
+    # initiate local wind speed
     g = set_wind_speed_profile(g=g, wind_speed_ref=inputs_hourly.weather['u'].iloc[0])
 
-    ##############################################################################
-    g = set_temperature_profile(g=g, temperature_air_ref=inputs_hourly.weather['Tac'].iloc[0], temperature_ground=10)
+    # initiate local air temperature
+    g = set_air_temperature_profile(
+        g=g,
+        temperature_air_ref=inputs_hourly.weather['Tac'].iloc[0],
+        temperature_ground=inputs_hourly.weather['Tac'].iloc[0])
 
     if leaf_ppfd is not None:
         diffuse_to_total_irradiance_ratio = leaf_ppfd[g.date]['diffuse_to_total_irradiance_ratio']
