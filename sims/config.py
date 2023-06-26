@@ -20,7 +20,7 @@ class Config:
         self.path_output_dir = self.path_root / 'output'
 
         self.unit_digit: str = 'cm'
-        self.spacing_between_rows: float = 100  # cm
+        self.spacing_between_rows: float = 180  # cm
         self.spacing_on_row: float = Pot().radius_upper * 2.  # cm
         self.row_angle_with_sout: float = 140
         self.leaf_height_attribute: str = 'TopPosition'
