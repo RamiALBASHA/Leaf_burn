@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 from hydroshoot import (architecture, solver, io)
 from hydroshoot.energy import calc_effective_sky_temperature
+from hydroshoot.initialisation import set_collar_water_potential_function
 from openalea.mtg.mtg import MTG
 from openalea.plantgl.all import Scene, surface
 from pandas import DataFrame
@@ -14,19 +15,24 @@ from leaf_burn.utils import copy_mtg, extract_mtg
 
 
 def run(g: MTG, wd: Path, path_weather: Path, params: dict = None,
+        is_cst_air_temperature_profile: bool = False,
+        is_cst_wind_speed_profile: bool = False,
         plant_id: str = None, scene: Scene = None, is_write_result: bool = True,
-        is_write_mtg: bool = False, path_output: Path = None, **kwargs) -> DataFrame:
+        is_write_mtg: bool = False, path_output_dir: Path = None, **kwargs) -> DataFrame:
     """Calculates leaf gas and energy exchange in addition to the hydraulic structure of an individual plant.
 
     Args:
         g: mtg object
         wd: working directory
+        path_weather: weather file path
         params: model params
+        is_cst_wind_speed_profile: True to consider constant wind speed across depth
+        is_cst_air_temperature_profile: True to consider constant air temperature across depth
         plant_id: plant identifier, if given, the mtg will only run for this plant (default None)
         scene: PlantGl scene (default None)
         is_write_result: if True then hourly plant-scale outputs are written into a CSV file
         is_write_mtg: if True then hourly mtg's are written into a .pckl file
-        path_output: summary data output file path
+        path_output_dir: summary data output file path
         kwargs: can include:
             psi_soil (float): [MPa] predawn soil water potential
             gdd_since_budbreak (float): [°Cd] growing degree-day since bubreak
@@ -58,7 +64,7 @@ def run(g: MTG, wd: Path, path_weather: Path, params: dict = None,
         is_nitrogen_calculated='Na' in g.property_names(),
         is_ppfd_interception_calculated='leaf_ppfd' in g.property_names(),
         is_write_result=is_write_result,
-        path_output_file=path_output,
+        path_output_file=path_output_dir,
         **kwargs)
     io.verify_inputs(g=g, inputs=inputs)
     params = inputs.params
@@ -72,7 +78,7 @@ def run(g: MTG, wd: Path, path_weather: Path, params: dict = None,
     g = extract_mtg(g, plant_id=plant_id)
 
     g, g_clone = initialisation_twins.init_model(g=g, g_clone=g_clone, inputs=inputs)
-    calc_collar_water_potential = initialisation_twins.set_collar_water_potential_function(params=params)
+    calc_collar_water_potential = set_collar_water_potential_function(params=params)
     # ==============================================================================
     # Simulations
     # ==============================================================================
@@ -83,7 +89,7 @@ def run(g: MTG, wd: Path, path_weather: Path, params: dict = None,
     leaf_temperature_dict = {}
 
     # The time loop +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    inputs_hourly = io.HydroShootHourlyInputs(psi_soil=inputs.psi_soil_forced, sun2scene=inputs.sun2scene)
+    inputs_hourly = io.HydroShootHourlyInputs(psi_soil=inputs.psi_soil, sun2scene=inputs.sun2scene)
 
     for date in params.simulation.date_range:
         print("=" * 72)
@@ -91,10 +97,12 @@ def run(g: MTG, wd: Path, path_weather: Path, params: dict = None,
 
         # Select meteo data
         inputs_hourly.update(g=g, date_sim=date, hourly_weather=inputs.weather[inputs.weather.index == date],
-                             psi_pd=inputs.psi_pd, params=params)
+                             psi_pd=inputs.psi_pd, is_psi_forced=inputs.is_psi_soil_forced, params=params)
 
         g, diffuse_to_total_irradiance_ratio = initialisation_twins.init_hourly(
-            g=g, g_clone=g_clone, inputs_hourly=inputs_hourly, leaf_ppfd=inputs.leaf_ppfd, params=params)
+            g=g, g_clone=g_clone, inputs_hourly=inputs_hourly, leaf_ppfd=inputs.leaf_ppfd, params=params,
+            is_cst_air_temperature_profile=is_cst_air_temperature_profile,
+            is_cst_wind_speed_profile=is_cst_wind_speed_profile)
 
         inputs_hourly.sky_temperature = calc_effective_sky_temperature(
             diffuse_to_total_irradiance_ratio=diffuse_to_total_irradiance_ratio,
