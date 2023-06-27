@@ -31,7 +31,7 @@
     ]
   },
   "numerical_resolution": {
-    "max_iter": 100,
+    "max_iter": 35,
     "psi_step": 0.5,
     "psi_error_threshold": 0.05,
     "t_step": 0.5,
