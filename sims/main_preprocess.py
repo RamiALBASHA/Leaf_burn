@@ -58,7 +58,7 @@ def run_preprocess(id_plant: str, df: DataFrame):
     print("Computing 'dynamic' data...")
     dynamic_data = {}
 
-    inputs_hourly = io.HydroShootHourlyInputs(psi_soil=inputs.psi_soil_forced, sun2scene=inputs.sun2scene)
+    inputs_hourly = io.HydroShootHourlyInputs(psi_soil=inputs.psi_soil, sun2scene=inputs.sun2scene)
 
     params = inputs.params
     for date in params.simulation.date_range:
@@ -66,10 +66,11 @@ def run_preprocess(id_plant: str, df: DataFrame):
         print(f'Date: {date}\n')
 
         inputs_hourly.update(g=g, date_sim=date, hourly_weather=inputs.weather[inputs.weather.index == date],
-                             psi_pd=inputs.psi_pd, params=params)
+                             psi_pd=inputs.psi_pd, is_psi_forced=inputs.is_psi_soil_forced, params=params)
 
         g, diffuse_to_total_irradiance_ratio = initialisation_twins.init_hourly(
-            g=g, g_clone=g_clone, inputs_hourly=inputs_hourly, leaf_ppfd=inputs.leaf_ppfd, params=params)
+            g=g, g_clone=g_clone, inputs_hourly=inputs_hourly, leaf_ppfd=inputs.leaf_ppfd, params=params,
+            is_cst_air_temperature_profile=True, is_cst_wind_speed_profile=True)
 
         dynamic_data.update({g.date: {
             'diffuse_to_total_irradiance_ratio': diffuse_to_total_irradiance_ratio,
