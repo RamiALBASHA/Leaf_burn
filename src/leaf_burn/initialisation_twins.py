@@ -1,10 +1,9 @@
 from datetime import datetime
-from typing import Callable
 from typing import Tuple
 
-from hydroshoot import soil
 from hydroshoot.architecture import add_soil_surface_mesh, get_leaves, get_mtg_base
-from hydroshoot.energy import set_form_factors_simplified
+from hydroshoot.energy import (set_form_factors_simplified, set_local_air_temperature, set_local_wind_speed,
+                               set_leaf_temperature_to_air_temperature, set_local_vpd)
 from hydroshoot.initialisation import (remove_stem_geometry, traversal, calc_nitrogen_distribution,
                                        set_photosynthetic_capacity)
 from hydroshoot.io import HydroShootInputs, HydroShootHourlyInputs
@@ -13,22 +12,6 @@ from hydroshoot.params import Params
 from openalea.mtg.mtg import MTG
 
 from leaf_burn.funcs import set_wind_speed_profile, set_air_temperature_profile
-
-
-def set_collar_water_potential_function(params: Params, **kwargs) -> Callable:
-    if params.soil.is_rhyzo_solution:
-        def func(transpiration: float, soil_water_potential: float, **kwargs) -> float:
-            return soil.calc_collar_water_potential(
-                transpiration=transpiration,
-                bulk_soil_water_potential=soil_water_potential,
-                rhyzosphere_volume=params.soil.rhyzo_volume,
-                soil_class=params.soil.soil_class,
-                root_radius=params.soil.avg_root_radius,
-                root_length=params.soil.root_length)
-    else:
-        def func(soil_water_potential: float, **kwargs):
-            return soil_water_potential
-    return func
 
 
 def init_model(g: MTG, g_clone: MTG, inputs: HydroShootInputs) -> Tuple[MTG, MTG]:
@@ -111,18 +94,33 @@ def init_model(g: MTG, g_clone: MTG, inputs: HydroShootInputs) -> Tuple[MTG, MTG
 
 
 def init_hourly(g: MTG, g_clone: MTG, inputs_hourly: HydroShootHourlyInputs, leaf_ppfd: dict,
-                params: Params) -> (MTG, float):
+                params: Params, is_cst_air_temperature_profile: bool, is_cst_wind_speed_profile: bool) -> (MTG, float):
     # Add a date index to g
     g.date = datetime.strftime(inputs_hourly.date, "%Y%m%d%H%M%S")
 
     # initiate local wind speed
-    g = set_wind_speed_profile(g=g, wind_speed_ref=inputs_hourly.weather['u'].iloc[0])
+    if is_cst_wind_speed_profile:
+        g.properties()['u'] = set_local_wind_speed(
+            g=g, meteo=inputs_hourly.weather, leaf_lbl_prefix=params.mtg_api.leaf_lbl_prefix)
+    else:
+        g = set_wind_speed_profile(g=g, wind_speed_ref=inputs_hourly.weather['u'].iloc[0])
 
     # initiate local air temperature
-    g = set_air_temperature_profile(
-        g=g,
-        temperature_air_ref=inputs_hourly.weather['Tac'].iloc[0],
-        temperature_ground=inputs_hourly.weather['Tac'].iloc[0])
+    if is_cst_air_temperature_profile:
+        g.properties()['Tac'] = set_local_air_temperature(
+            g=g, meteo=inputs_hourly.weather, leaf_lbl_prefix=params.mtg_api.leaf_lbl_prefix)
+    else:
+        g = set_air_temperature_profile(
+            g=g,
+            temperature_air_ref=inputs_hourly.weather['Tac'].iloc[0],
+            temperature_ground=inputs_hourly.weather['Tsoil'].iloc[0])
+
+    # Initialize leaf temperature to air temperature
+    g = set_leaf_temperature_to_air_temperature(g=g, leaf_lbl_prefix=params.mtg_api.leaf_lbl_prefix)
+
+    # initiate local leaf-to-air vapor pressure deficit
+    g = set_local_vpd(
+        g=g, relative_humidity=inputs_hourly.weather['hs'].iloc[0], leaf_lbl_prefix=params.mtg_api.leaf_lbl_prefix)
 
     if leaf_ppfd is not None:
         diffuse_to_total_irradiance_ratio = leaf_ppfd[g.date]['diffuse_to_total_irradiance_ratio']
