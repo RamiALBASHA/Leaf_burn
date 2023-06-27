@@ -7,7 +7,7 @@ Simulating canopy temperature in grapevine during heat wave
 
 This will take several minutes to create the ~3.4 GB environment
 
-    conda create -n leaf_burn -c openalea3 -c conda-forge openalea.hydroshoot=5.1.1
+    conda create -n leaf_burn -c openalea3 -c conda-forge openalea.hydroshoot=5.2.1
     conda activate leaf_burn
 
 
