@@ -62,6 +62,6 @@ if __name__ == '__main__':
     is_constant_air_temperature = [False, True]
     is_constant_wind_speed = [False, True]
     time_on = datetime.now()
-    mp(sim_args=product(names_plant, [is_constant_air_temperature], [is_constant_wind_speed]), nb_cpu=12)
+    mp(sim_args=product(names_plant, is_constant_air_temperature, is_constant_wind_speed), nb_cpu=12)
     time_off = datetime.now()
     print(f"--- Total runtime: {(time_off - time_on).seconds} sec ---")
