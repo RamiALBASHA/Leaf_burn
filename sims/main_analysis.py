@@ -1,3 +1,4 @@
+from datetime import date
 from itertools import product
 from pathlib import Path
 from pickle import load
@@ -7,7 +8,7 @@ from hydroshoot.utilities import vapor_pressure_deficit
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from openalea.mtg.mtg import MTG
-from pandas import read_csv, DataFrame
+from pandas import read_csv, DataFrame, to_datetime
 
 from sims.config import Config
 
@@ -27,6 +28,28 @@ def plot_property(prop: str, g: MTG, ax: pyplot.Subplot, prop2: str) -> tuple:
 def plot_leaf_temperature_profile(id_plant, g: MTG, ax: pyplot.Subplot) -> pyplot.Subplot:
     ax.scatter(*zip(*[(g.node(vid).Tlc, g.node(vid).TopPosition[2]) for vid in get_leaves(g)]), label=id_plant)
     return ax
+
+
+def plot_canopy_absorbed_irradiance(weather: DataFrame):
+    weather.set_index('time', inplace=True)
+    weather.index = to_datetime(weather.index)
+    weather_heatwave = weather[weather.index.date == date(2019, 6, 28)]
+
+    fig, ax = pyplot.subplots()
+    ax.plot(*zip(*enumerate(weather_heatwave['Rg'].values)), 'k-', label='incident')
+    for is_cst_t, is_cst_w in product((True, False), (True, False)):
+        path_output_dir = cfg.path_output_dir / f"{'tcst' if is_cst_t else 'tvar'}_{'ucst' if is_cst_w else 'uvar'}"
+
+        for i, plant in enumerate(PLANT_IDS):
+            res = read_csv(path_output_dir / plant / f'time_series.csv', sep=';', decimal='.')
+            ax.plot(*zip(*enumerate(res['Rg'])), marker='None', color='grey', alpha=0.5, label='absorbed')
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles=handles[:2], labels=labels[:2])
+    ax.set(xlabel='local hour', ylabel=r'$\mathregular{(W\/m^{-2}_{ground}})}$')
+    fig.tight_layout()
+    fig.savefig(cfg.path_output_dir / 'irradiance.png')
+
+    pass
 
 
 def plot_temperature(weather: DataFrame, path_output_dir: Path):
@@ -65,6 +88,8 @@ def plot_temperature(weather: DataFrame, path_output_dir: Path):
 if __name__ == '__main__':
     cfg = Config()
     weather_input = read_csv(cfg.path_weather, sep=";", decimal=".")
+
+    plot_canopy_absorbed_irradiance(weather=weather_input)
 
     # for is_cst_temperature, is_cst_wind in zip((False, True), (False, True)):
     for is_cst_temperature, is_cst_wind in product((True, False), (True, False)):
