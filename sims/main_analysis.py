@@ -89,16 +89,39 @@ def plot_property(weather: DataFrame, path_output_dir: Path, prop: str, prop2: s
     pass
 
 
+def plot_reponse_to_temperature():
+    fig, axs = pyplot.subplots(ncols=2, sharex='all')
+
+    for is_cst_t, is_cst_w in product((True, False), (True, False)):
+        path_output_dir = cfg.path_output_dir / f"{'tcst' if is_cst_t else 'tvar'}_{'ucst' if is_cst_w else 'uvar'}"
+        for hour in range(24):
+            for i, plant in enumerate(PLANT_IDS):
+                pth = path_output_dir / plant / f'mtg20190628{hour:02d}0000.pckl'
+                with open(pth, mode='rb') as f:
+                    g, _ = load(f)
+                axs[0].scatter(*zip(*[(g.node(vid).Tlc, g.node(vid).An) for vid in get_leaves(g)]), marker='.', c='r')
+                axs[1].scatter(*zip(*[(g.node(vid).Tlc, g.node(vid).gs) for vid in get_leaves(g)]), marker='.', c='r')
+        axs[0].set(xlabel='leaf temperature [°C]',
+                   ylabel=' '.join(['Net carbon assimilation', r"$\mathregular{[\mu mol\/m^{-2}\/s^{-1}]}$"]))
+        axs[1].set(xlabel='leaf temperature [°C]',
+                   ylabel=' '.join(['Stomatal conductance', r"$\mathregular{[mol\/m^{-2}\/s^{-1}]}$"]))
+    fig.tight_layout()
+    fig.savefig(cfg.path_output_dir / 'an_vs_tleaf.png')
+
+    pass
+
+
 if __name__ == '__main__':
     cfg = Config()
     weather_input = read_csv(cfg.path_weather, sep=";", decimal=".", index_col='time')
     weather_input.index = to_datetime(weather_input.index)
     weather_input = weather_input[weather_input.index.date == date(2019, 6, 28)]
 
+    plot_reponse_to_temperature()
     plot_canopy_absorbed_irradiance(weather=weather_input)
 
     for is_cst_temperature, is_cst_wind in product((True, False), (True, False)):
         name_index = f"{'tcst' if is_cst_temperature else 'tvar'}_{'ucst' if is_cst_wind else 'uvar'}"
         path_output = cfg.path_output_dir / name_index
-        plot_property(weather=weather_input, path_output_dir=path_output, prop='Tlc', prop2='Eabs')
+        plot_property(weather=weather_input, path_output_dir=path_output, prop='Tlc', prop2='gs')
         plot_property(weather=weather_input, path_output_dir=path_output, prop='An', prop2='Eabs')
