@@ -123,5 +123,6 @@ if __name__ == '__main__':
     for is_cst_temperature, is_cst_wind in product((True, False), (True, False)):
         name_index = f"{'tcst' if is_cst_temperature else 'tvar'}_{'ucst' if is_cst_wind else 'uvar'}"
         path_output = cfg.path_output_dir / name_index
+        plot_property(weather=weather_input, path_output_dir=path_output, prop='vpd', prop2='gs')
         plot_property(weather=weather_input, path_output_dir=path_output, prop='Tlc', prop2='gs')
         plot_property(weather=weather_input, path_output_dir=path_output, prop='An', prop2='Eabs')
