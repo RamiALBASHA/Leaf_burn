@@ -59,7 +59,7 @@ class Config:
                     "temp_inhib_beg": 100,
                     "temp_inhib_max": 150}},
             stomatal_sensitivity_weak={
-                'd0': 30,
+                'd0': 60,
                 'photo_inhibition': {
                     "dhd_inhib_beg": 200,
                     "dHd_inhib_max": 200,
