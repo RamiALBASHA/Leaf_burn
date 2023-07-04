@@ -74,7 +74,7 @@
   },
   "energy": {
     "solo": true,
-    "t_cloud": 2.0,
+    "t_cloud": 12.0,
     "t_sky": -20.0
   },
   "hydraulic": {
