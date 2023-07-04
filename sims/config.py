@@ -30,3 +30,41 @@ class Config:
             self.params = load(f)
         self.params['planting']['spacing_on_row'] = self.spacing_on_row / 100.
         self.params['planting']['spacing_between_rows'] = self.spacing_between_rows / 100.
+        self.scenarios = dict(
+            intermediate={
+                'd0': 7,
+                'photo_inhibition': {
+                    "dhd_inhib_beg": 200,
+                    "dHd_inhib_max": 200,
+                    "psi_inhib_beg": -1.5,
+                    "psi_inhib_max": -3,
+                    "temp_inhib_beg": 100,
+                    "temp_inhib_max": 150}},
+            biochemical_dominant={
+                'd0': 7,
+                "photo_inhibition": {
+                    "dhd_inhib_beg": 195,
+                    "dHd_inhib_max": 190,
+                    "psi_inhib_beg": -1.5,
+                    "psi_inhib_max": -3,
+                    "temp_inhib_beg": 35,
+                    "temp_inhib_max": 40}},
+            stomatal_sensitivity_dominant={
+                'd0': 1,
+                'photo_inhibition': {
+                    "dhd_inhib_beg": 200,
+                    "dHd_inhib_max": 200,
+                    "psi_inhib_beg": -1.5,
+                    "psi_inhib_max": -3,
+                    "temp_inhib_beg": 100,
+                    "temp_inhib_max": 150}},
+            stomatal_sensitivity_weak={
+                'd0': 30,
+                'photo_inhibition': {
+                    "dhd_inhib_beg": 200,
+                    "dHd_inhib_max": 200,
+                    "psi_inhib_beg": -1.5,
+                    "psi_inhib_max": -3,
+                    "temp_inhib_beg": 100,
+                    "temp_inhib_max": 150}}
+        )
