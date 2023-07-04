@@ -18,11 +18,11 @@ PLANT_IDS = ['belledenise', 'plantdec', 'poulsard', 'raboso', 'salice']
 DEFAULT_LABELS.update({'vpd': 'VPD [kPa]'})
 
 
-def plot_property_map(prop: str, g: MTG, ax: pyplot.Subplot, prop2: str) -> tuple:
+def plot_property_map(prop: str, g: MTG, ax: pyplot.Subplot, prop2: str, label: str = None) -> tuple:
     assert prop2 in ('Eabs', 'Ei', 'gs')
     x, y, c = zip(*[(g.node(vid).properties()[prop], g.node(vid).TopPosition[2], g.node(vid).properties()[prop2])
                     for vid in get_leaves(g)])
-    im_ = ax.scatter(x, y, c=c, vmin=0, vmax=(1800 if prop2 in ("Eabs", "Ei") else 0.5), cmap='hot')
+    im_ = ax.scatter(x, y, c=c, vmin=0, vmax=(1800 if prop2 in ("Eabs", "Ei") else 0.5), cmap='hot', label=label)
     #    ax.scatter(*zip(*[(g.node(vid).properties()[prop], g.node(vid).TopPosition[2])
     #                      for vid in get_leaves(g)]), label=id_plant)
     return ax, im_
@@ -36,12 +36,11 @@ def plot_leaf_temperature_profile(id_plant, g: MTG, ax: pyplot.Subplot) -> pyplo
 def plot_canopy_absorbed_irradiance(weather: DataFrame):
     fig, ax = pyplot.subplots()
     ax.plot(*zip(*enumerate(weather['Rg'].values)), 'k-', label='incident')
-    for is_cst_t, is_cst_w in product((True, False), (True, False)):
-        path_output_dir = cfg.path_output_dir / f"{'tcst' if is_cst_t else 'tvar'}_{'ucst' if is_cst_w else 'uvar'}"
+    path_output_dir = cfg.path_output_dir / list(cfg.scenarios.keys())[0] / 'tvar_uvar'
 
-        for i, plant in enumerate(PLANT_IDS):
-            res = read_csv(path_output_dir / plant / f'time_series.csv', sep=';', decimal='.')
-            ax.plot(*zip(*enumerate(res['Rg'])), marker='None', color='grey', alpha=0.5, label='absorbed')
+    for i, plant in enumerate(PLANT_IDS):
+        res = read_csv(path_output_dir / plant / f'time_series.csv', sep=';', decimal='.')
+        ax.plot(*zip(*enumerate(res['Rg'])), marker='None', color='grey', alpha=0.5, label='absorbed')
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles=handles[:2], labels=labels[:2])
     ax.set(xlabel='local hour', ylabel=r'$\mathregular{(W\/m^{-2}_{ground}})}$')
@@ -92,21 +91,59 @@ def plot_property(weather: DataFrame, path_output_dir: Path, prop: str, prop2: s
 def plot_reponse_to_temperature():
     fig, axs = pyplot.subplots(ncols=2, sharex='all')
 
-    for is_cst_t, is_cst_w in product((True, False), (True, False)):
-        path_output_dir = cfg.path_output_dir / f"{'tcst' if is_cst_t else 'tvar'}_{'ucst' if is_cst_w else 'uvar'}"
-        for hour in range(24):
-            for i, plant in enumerate(PLANT_IDS):
-                pth = path_output_dir / plant / f'mtg20190628{hour:02d}0000.pckl'
-                with open(pth, mode='rb') as f:
-                    g, _ = load(f)
-                axs[0].scatter(*zip(*[(g.node(vid).Tlc, g.node(vid).An) for vid in get_leaves(g)]), marker='.', c='r')
-                axs[1].scatter(*zip(*[(g.node(vid).Tlc, g.node(vid).gs) for vid in get_leaves(g)]), marker='.', c='r')
-        axs[0].set(xlabel='leaf temperature [°C]',
-                   ylabel=' '.join(['Net carbon assimilation', r"$\mathregular{[\mu mol\/m^{-2}\/s^{-1}]}$"]))
-        axs[1].set(xlabel='leaf temperature [°C]',
-                   ylabel=' '.join(['Stomatal conductance', r"$\mathregular{[mol\/m^{-2}\/s^{-1}]}$"]))
+    for scen in cfg.scenarios.keys():
+        for is_cst_t, is_cst_w in product((True, False), (True, False)):
+            path_output_dir = cfg.path_output_dir / scen / (
+                f"{'tcst' if is_cst_t else 'tvar'}_{'ucst' if is_cst_w else 'uvar'}")
+            for hour in range(24):
+                for i, plant in enumerate(PLANT_IDS):
+                    pth = path_output_dir / plant / f'mtg20190628{hour:02d}0000.pckl'
+                    with open(pth, mode='rb') as f:
+                        g, _ = load(f)
+                    axs[0].scatter(*zip(*[(g.node(vid).Tlc, g.node(vid).An) for vid in get_leaves(g)]), marker='.', c='r')
+                    axs[1].scatter(*zip(*[(g.node(vid).Tlc, g.node(vid).gs) for vid in get_leaves(g)]), marker='.', c='r')
+            axs[0].set(xlabel='leaf temperature [°C]',
+                       ylabel=' '.join(['Net carbon assimilation', r"$\mathregular{[\mu mol\/m^{-2}\/s^{-1}]}$"]))
+            axs[1].set(xlabel='leaf temperature [°C]',
+                       ylabel=' '.join(['Stomatal conductance', r"$\mathregular{[mol\/m^{-2}\/s^{-1}]}$"]))
     fig.tight_layout()
     fig.savefig(cfg.path_output_dir / 'an_vs_tleaf.png')
+
+    pass
+
+
+def plot_temperature_profile(hour: int, path_output_dir: Path, weather: DataFrame, prop='Tlc', prop2='gs'):
+    fig, ax = pyplot.subplots()
+
+    w = weather[weather.index == f'2019-06-28 {hour:02d}:00']
+    tair = w['Tac'].iloc[0]
+    vpd_air = vapor_pressure_deficit(temp_air=tair, temp_leaf=tair, rh=w['hs'].iloc[0])
+    for i, plant in enumerate(PLANT_IDS):
+        pth = path_output_dir / plant / f'mtg20190628{hour:02d}0000.pckl'
+        with open(pth, mode='rb') as f:
+            g, _ = load(f)
+        ax, im = plot_property_map(prop=prop, g=g, ax=ax, prop2='gs', label=plant)
+
+    ax.text(0.05, 0.2, f'{hour:02d}:00', transform=ax.transAxes)
+    ax.text(0.05, 0.1, f'VPDa = {vpd_air:.1f} kPa', transform=ax.transAxes)
+    if prop == 'Tlc':
+        ax.vlines(tair, 0, 200, label='air')
+        ax.xaxis.grid(True, which='minor')
+        ax.xaxis.set_minor_locator(MultipleLocator(5))
+    # ax.set(xlabel='Leaf temperature (°C)', ylabel='Leaf height (m)', xlim=(30, 50))
+    ax.set(xlabel='Temperature [°C]' if prop == 'Tlc' else DEFAULT_LABELS[prop],
+           ylabel='Leaf height [cm]',
+           xlim=(35, 60))
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles=handles[-2:], labels=['leaf'] + [labels[-1]], loc='lower right')
+    if prop2 is not None:
+        cbar_ax = inset_axes(ax, width="30%", height="5%", loc=1)
+        fig.colorbar(im, cax=cbar_ax, label=DEFAULT_LABELS[prop2], orientation='horizontal')
+
+    scenario = path_output_dir.name
+    fig.suptitle(scenario)
+    fig.tight_layout()
+    fig.savefig(path_output_dir.parent / f'{prop}_{prop2}_{scenario}_{hour}.png')
 
     pass
 
@@ -119,6 +156,12 @@ if __name__ == '__main__':
 
     plot_reponse_to_temperature()
     plot_canopy_absorbed_irradiance(weather=weather_input)
+    plot_temperature_profile(
+        hour=16,
+        path_output_dir=cfg.path_output_dir / 'intermediate' / 'tvar_uvar',
+        weather=weather_input,
+        prop='Tlc',
+        prop2='gs')
 
     for is_cst_temperature, is_cst_wind in product((True, False), (True, False)):
         name_index = f"{'tcst' if is_cst_temperature else 'tvar'}_{'ucst' if is_cst_wind else 'uvar'}"
