@@ -161,3 +161,5 @@ cython_debug/
 
 sims/output/**/*.png
 sims/preprocessed_data
+/sims/source/digit/raw/
+/sims/output
