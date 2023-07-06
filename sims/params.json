@@ -15,7 +15,7 @@
   "planting": {
     "spacing_between_rows": 1,
     "spacing_on_row": null,
-    "row_angle_with_south": 140
+    "row_angle_with_south": -40
   },
   "phenology": {
     "emdate": "2019-04-01 00:00:00",
