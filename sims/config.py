@@ -19,6 +19,7 @@ class Config:
         self.path_preprocessed_data = self.path_root / 'preprocessed_data'
         self.path_output_dir = self.path_root / 'output'
 
+        self.expositions: list[tuple] = [('exposed_north_east', 140), ('exposed_south_west', -40)]
         self.unit_digit: str = 'cm'
         self.spacing_between_rows: float = 180  # cm
         self.spacing_on_row: float = Pot().radius_upper * 2.  # cm
