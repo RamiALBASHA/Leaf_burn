@@ -1,4 +1,3 @@
-import re
 from datetime import datetime
 from itertools import product
 from json import dump
@@ -18,21 +17,26 @@ from leaf_burn.utils import copy_mtg, extract_mtg
 cfg = Config()
 
 
-def run_preprocess(id_plant: str, df: DataFrame):
+def run_preprocess(id_plant: str, df: DataFrame, exposition: list):
     path_digit = cfg.path_digit / f'digit_{id_plant}.csv'
+    exposition_id, row_angle_with_south = exposition
+
     df[df["Plant"].apply(lambda x: x.startswith(id_plant))].to_csv(path_digit, sep=';', decimal='.', index=False)
 
     g, scene = funcs.build_mtg(path_file=path_digit, is_show_scene=False)
     # g = funcs.add_pots(g=g, pot=Pot())
 
-    path_preprocessed_data = cfg.path_preprocessed_data / id_plant
+    path_preprocessed_data = cfg.path_preprocessed_data / exposition_id / id_plant
     path_preprocessed_data.mkdir(parents=True, exist_ok=True)
     print("Computing 'static' data...")
+
+    user_params = cfg.params
+    user_params['planting']['row_angle_with_south'] = row_angle_with_south
 
     inputs = io.HydroShootInputs(
         path_project=cfg.path_root,
         path_weather=cfg.path_weather,
-        user_params=cfg.params,
+        user_params=user_params,
         scene=scene,
         is_write_result=False,
         path_output_file=Path(),
@@ -102,6 +106,6 @@ if __name__ == '__main__':
 
     # run_preprocess(id_plant=list(names_plant)[0])
     time_on = datetime.now()
-    mp(sim_args=product(names_plant, [digit_df]), nb_cpu=12)
+    mp(sim_args=product(names_plant, [digit_df], cfg.expositions), nb_cpu=12)
     time_off = datetime.now()
     print(f"--- Total runtime: {(time_off - time_on).seconds} sec ---")

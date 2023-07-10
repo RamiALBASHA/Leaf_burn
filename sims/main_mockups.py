@@ -16,24 +16,28 @@ from sims import config
 
 def show_the_sun(mtg_obj: MTG, name: str):
     cfg = config.Config()
-    params = Params('', user_params=cfg.params)
 
     weather = read_csv(cfg.path_weather, sep=';', decimal='.', index_col='time')
     weather.index = to_datetime(weather.index)
     weather_heatwave = weather[weather.index.date == date(2019, 6, 28)]
 
-    scene = visu(mtg_obj, def_elmnt_color_dict=True, scene=Scene())
-    for date_sim in weather_heatwave.index:
-        caribu_source, diffuse_to_total_irradiance_ratio = irradiance_distribution(
-            meteo=weather_heatwave[weather_heatwave.index == date_sim],
-            geo_location=params.simulation.geo_location,
-            irradiance_unit=params.irradiance.E_type,
-            time_zone=params.simulation.tzone,
-            turtle_sectors=params.irradiance.turtle_sectors,
-            turtle_format=params.irradiance.turtle_format,
-            sun2scene=scene,
-            rotation_angle=params.planting.scene_rotation)
-    Viewer.saveSnapshot(str(path_digit / f'{name}_sun_course.png'))
+    for expo_id, expo_angle in cfg.expositions:
+        user_params = cfg.params
+        user_params['planting']['row_angle_with_south'] = expo_angle
+
+        params = Params('', user_params=user_params)
+        scene = visu(mtg_obj, def_elmnt_color_dict=True, scene=Scene())
+        for date_sim in weather_heatwave.index:
+            caribu_source, diffuse_to_total_irradiance_ratio = irradiance_distribution(
+                meteo=weather_heatwave[weather_heatwave.index == date_sim],
+                geo_location=params.simulation.geo_location,
+                irradiance_unit=params.irradiance.E_type,
+                time_zone=params.simulation.tzone,
+                turtle_sectors=params.irradiance.turtle_sectors,
+                turtle_format=params.irradiance.turtle_format,
+                sun2scene=scene,
+                rotation_angle=params.planting.scene_rotation)
+        Viewer.saveSnapshot(str(path_digit / f'{expo_id}_{name}_sun_course.png'))
 
     pass
 

@@ -12,8 +12,9 @@ from sims.config import Config
 cfg = Config()
 
 
-def run_hydroshoot(id_plant: str, is_cst_air_temperature: bool, is_cst_wind_speed: bool, scenario_id: str):
-    path_preprocessed_dir = cfg.path_preprocessed_data / id_plant
+def run_hydroshoot(id_plant: str, is_cst_air_temperature: bool, is_cst_wind_speed: bool, scenario_id: str, expo: list):
+    expo_id, expo_angle = expo
+    path_preprocessed_dir = cfg.path_preprocessed_data / expo_id / id_plant
 
     g, scene = load_mtg(
         path_mtg=str(path_preprocessed_dir / f'initial_mtg_{id_plant}.pckl'),
@@ -28,8 +29,9 @@ def run_hydroshoot(id_plant: str, is_cst_air_temperature: bool, is_cst_wind_spee
     params = cfg.params
     params['exchange']['par_gs']['D0'] = scenario_val['d0']
     params['exchange']['par_photo']['photo_inhibition'] = scenario_val['photo_inhibition']
+    params['planting']['row_angle_with_south'] = expo_angle
 
-    path_output = cfg.path_output_dir / scenario_id / (
+    path_output = cfg.path_output_dir / expo_id / scenario_id / (
         f'{"tcst" if is_cst_air_temperature else "tvar"}_{"ucst" if is_cst_wind_speed else "uvar"}') / id_plant
     path_output.mkdir(parents=True, exist_ok=True)
 
@@ -67,6 +69,8 @@ if __name__ == '__main__':
     is_constant_air_temperature = [False, True]
     is_constant_wind_speed = [False, True]
     time_on = datetime.now()
-    mp(sim_args=product(names_plant, is_constant_air_temperature, is_constant_wind_speed, cfg.scenarios), nb_cpu=12)
+    mp(sim_args=product(names_plant, is_constant_air_temperature, is_constant_wind_speed, cfg.scenarios,
+                        cfg.expositions),
+       nb_cpu=12)
     time_off = datetime.now()
     print(f"--- Total runtime: {(time_off - time_on).seconds} sec ---")
