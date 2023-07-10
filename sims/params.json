@@ -13,7 +13,7 @@
     "energy_budget": true
   },
   "planting": {
-    "spacing_between_rows": 1,
+    "spacing_between_rows": null,
     "spacing_on_row": null,
     "row_angle_with_south": -40
   },
