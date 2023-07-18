@@ -1,11 +1,12 @@
 from datetime import date
 from itertools import product
+from math import pi
 from pathlib import Path
 from pickle import load
 
 import openalea.plantgl.all as pgl
-from hydroshoot.architecture import get_leaves, load_mtg
-from hydroshoot.display import DEFAULT_LABELS, visu
+from hydroshoot.architecture import get_leaves, load_mtg, slim_cylinder
+from hydroshoot.display import DEFAULT_LABELS, visu, DEFAULT_COLORS
 from hydroshoot.utilities import vapor_pressure_deficit
 from matplotlib import pyplot
 from matplotlib.ticker import MultipleLocator
@@ -13,7 +14,8 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from openalea.mtg.mtg import MTG
 from pandas import read_csv, DataFrame, to_datetime
 
-from sims.config import Config
+from leaf_burn import funcs
+from sims.config import Config, Pot
 
 PLANT_IDS = ['belledenise', 'plantdec', 'poulsard', 'raboso', 'salice']
 DEFAULT_LABELS = {k: v.replace('[', '(').replace(']', ')') for k, v in DEFAULT_LABELS.items()}
@@ -193,6 +195,71 @@ def plot_mockup(hour: int, path_output_dir: Path):
     pass
 
 
+def plot_scene(hour: int, scenario_stomatal_behavior: str, path_output_dir: Path,
+               is_cst_air_temperature: bool = False, is_cst_wind_speed: bool = False):
+    path_digit = Path(r'C:\Users\albashar\Documents\dvp\Leaf_burn\sims\source\digit')
+    g_all, _ = funcs.build_mtg(path_file=path_digit / 'all_pots_demo.csv', is_show_scene=True)
+    g_all = funcs.add_pots(g=g_all, pot=Pot())
+
+    element_colors = {k: (40, 40, 40) for k in list(DEFAULT_COLORS.keys()) + ['other']}
+    scene = visu(g_all, elmnt_color_dict=element_colors, scene=pgl.Scene(), view_result=True)
+
+    dx_positions = dict(
+        belledenise=-5,
+        plantdec=21,
+        poulsard=-18,
+        raboso=8,
+        salice=34)
+
+    pot = Pot()
+    for i, (expo_id, expo_angle) in enumerate(cfg.expositions):
+        for plant in PLANT_IDS:
+
+            pth_mtg = cfg.path_output_dir / expo_id / scenario_stomatal_behavior / (
+                f'{"tcst" if is_cst_air_temperature else "tvar"}_{"ucst" if is_cst_wind_speed else "uvar"}') / plant / (
+                          f'mtg20190628{hour:02d}0000.pckl')
+            pth_geom = cfg.path_preprocessed_data / expo_id / f'{plant}/geometry_{plant}.bgeom'
+            for i_pos in range(9):
+
+                g, _ = load_mtg(path_mtg=pth_mtg, path_geometry=pth_geom)
+
+                x_base, y_base = g.node(g.node(g.root).vid_base).BotPosition[:2]
+                vid_base = g.node(g.root).vid_base
+                vid_pot = g.add_component(complex_id=vid_base, label='other', edge_type='/')
+                mesh_pot = slim_cylinder(length=pot.height, radius_base=pot.radius_lower, radius_top=pot.radius_upper)
+                mesh_pot = pgl.Translated(pgl.Vector3([x_base, y_base, 0]), mesh_pot)
+                g.node(vid_pot).geometry = mesh_pot
+
+                theta = 0 if i == 0 else pi
+                dx = -5 if i == 0 else dx_positions[plant]
+                dy = 0.1 if i == 0 else -20.1  # -20
+
+                for v in get_leaves(g):
+                    n = g.node(v)
+                    # g.node(v).TopPosition = [n.TopPosition[0] - x_base, n.TopPosition[1] - y_base, n.TopPosition[2]]
+                    # g.node(v).BotPosition = [n.BotPosition[0] - x_base, n.BotPosition[1] - y_base, n.BotPosition[2]]
+                    mesh = n.geometry
+                    if n.label.startswith('L'):
+                        mesh = pgl.EulerRotated(theta, 0, 0, mesh)
+                        mesh = pgl.Translated(pgl.Vector3([dx + (i_pos - 3) * 65, dy, 0.0]), mesh)
+                        g.node(v).geometry = mesh
+
+                scene = visu(g, plot_prop='Tlc', min_value=35, max_value=60, scene=scene)
+                pyplot.close()
+
+            if plant == PLANT_IDS[0]:
+                scene = visu(g, plot_prop='Tlc', min_value=35, max_value=60, scene=scene)
+        fig = pyplot.figure(1)
+        cbar_ax = fig.get_axes()[0]
+        cbar_ax.set_xlabel('Leaf temperature (°C)')
+        cbar_ax.set_xticklabels([int(x) for x in cbar_ax.get_xticks()], ha='center', va='top')
+        fig.set_size_inches(6 / 2.54, 2 / 2.54)
+        fig.savefig(str(path_output_dir / 'cbar.png'))
+        pgl.Viewer.saveSnapshot(str(path_output_dir / 'mkp.png'))
+
+    pass
+
+
 if __name__ == '__main__':
     cfg = Config()
     weather_input = read_csv(cfg.path_weather, sep=";", decimal=".", index_col='time')
@@ -210,9 +277,10 @@ if __name__ == '__main__':
             prop='Tlc',
             prop2='gs')
 
-    # plot_mockup(
-    #     hour=16,
-    #     path_output_dir=cfg.path_output_dir / 'intermediate' / 'tvar_uvar')
+    plot_scene(
+        hour=16,
+        scenario_stomatal_behavior='intermediate',
+        path_output_dir=cfg.path_output_dir.parent)
 
     for expo_id, _ in cfg.expositions:
         for sim_scen in cfg.scenarios.keys():
