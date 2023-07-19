@@ -186,7 +186,7 @@ def plot_temperature_vs_light(weather: DataFrame):
 
 
 def plot_temperature_profile(hour: int, path_output_dir: Path, weather: DataFrame, prop='Tlc', prop2='gs'):
-    fig, ax = pyplot.subplots()
+    fig, ax = pyplot.subplots(figsize=(8.8 / 2.54, 13 / 2.54))
 
     w = weather[weather.index == f'2019-06-28 {hour:02d}:00']
     tair = w['Tac'].iloc[0]
@@ -202,9 +202,9 @@ def plot_temperature_profile(hour: int, path_output_dir: Path, weather: DataFram
             air_temperature += t_air
         ax, im = plot_property_map(prop=prop, g=g, ax=ax, prop2='gs', label=plant)
 
-    ax.text(0.05, 0.3, f'{hour:02d}:00', transform=ax.transAxes)
-    ax.text(0.05, 0.2, f'VPDa = {vpd_air:.1f} kPa', transform=ax.transAxes)
-    ax.text(0.05, 0.1, ' '.join([f'Rg = {w["Rg"].iloc[0]:.0f}', r"$\mathregular{W\/m^{-2}}$"]), transform=ax.transAxes)
+    ax.text(0.03, 0.13, f'{hour:02d}:00', transform=ax.transAxes)
+    ax.text(0.03, 0.08, f'VPDa = {vpd_air:.1f} kPa', transform=ax.transAxes)
+    ax.text(0.03, 0.03, ' '.join([f'Rg = {w["Rg"].iloc[0]:.0f}', r"$\mathregular{W\/m^{-2}}$"]), transform=ax.transAxes)
     if prop == 'Tlc':
         ax.xaxis.grid(True, which='minor')
         ax.xaxis.set_minor_locator(MultipleLocator(5))
@@ -216,15 +216,19 @@ def plot_temperature_profile(hour: int, path_output_dir: Path, weather: DataFram
            ylabel='Leaf height (cm)',
            xlim=(35, 60), ylim=[0, ax.get_ylim()[-1]])
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles=handles[-2:], labels=['leaf'] + [labels[-1]], loc='lower right')
+    ax.legend(handles=handles[-2:], labels=['leaf'] + [labels[-1]], loc='lower right', fontsize=8)
     if prop2 is not None:
         cbar_ax = inset_axes(ax, width="30%", height="5%", loc=1)
-        fig.colorbar(im, cax=cbar_ax, label=DEFAULT_LABELS[prop2], orientation='horizontal')
+        var_name = r'$\mathregular{' + DEFAULT_LABELS[prop2].split('$\\mathregular{')[1].split('(')[0].replace('\\/',
+                                                                                                               '') + '}$'
+        var_unit = r'$\mathregular{(' + DEFAULT_LABELS[prop2].split('$\\mathregular{')[1].split('(')[1].split(')')[
+            0] + ')}$'
+        cb = fig.colorbar(im, cax=cbar_ax, orientation='horizontal')
+        cb.set_label(label='\n'.join((var_name, var_unit)), size='small', weight='bold')
 
     scenario = path_output_dir.name
-    fig.suptitle(scenario)
     fig.tight_layout()
-    fig.savefig(path_output_dir.parent / f'{prop}_{prop2}_{scenario}_{hour}.png')
+    save_fig(fig=fig, fig_name=f'{prop}_{prop2}_{scenario}_{hour}', fig_path=path_output_dir.parent)
 
     pass
 
