@@ -11,6 +11,7 @@ from hydroshoot.utilities import vapor_pressure_deficit
 from matplotlib import pyplot
 from matplotlib.ticker import MultipleLocator
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from numpy import mean, quantile
 from openalea.mtg.mtg import MTG
 from pandas import read_csv, DataFrame, to_datetime
 
@@ -220,6 +221,37 @@ def plot_temperature_profile(hour: int, path_output_dir: Path, weather: DataFram
     pass
 
 
+def get_temperature_infos(hour: int, weather: DataFrame):
+    t_air = weather[weather.index == f'2019-06-28 {hour:02d}:00']['Tac'].iloc[0]
+
+    res = {k: [] for k in ('exposition', 'stomatal scenario', 'micrometeo scenario', 'tleaf max', 'tleaf mean',
+                           'tleaf q90')}
+    for expo_id, _ in cfg.expositions:
+        for stomatal_scenario in cfg.scenarios.keys():
+            for micrometeo_scenario in product(('tcst', 'tvar'), ('ucst', 'uvar')):
+                path_output_dir = cfg.path_output_dir / expo_id / stomatal_scenario / '_'.join(micrometeo_scenario)
+                t_leaf = []
+                for plant in PLANT_IDS:
+                    with open(path_output_dir / plant / f'mtg20190628{hour:02d}0000.pckl', mode='rb') as f:
+                        g, _ = load(f)
+                    t_leaf += g.property('Tlc').values()
+                res['exposition'].append(expo_id.split('exposed_')[1])
+                res['stomatal scenario'].append(stomatal_scenario)
+                res['micrometeo scenario'].append('_'.join(micrometeo_scenario))
+                res['tleaf max'].append(max(t_leaf))
+                res['tleaf mean'].append(mean(t_leaf))
+                res['tleaf q90'].append(quantile(t_leaf, 0.9))
+
+    df = DataFrame(res)
+    df.loc[:, 'tleaf max - tair'] = df['tleaf max'] - t_air
+    df.loc[:, 'tleaf mean - tair'] = df['tleaf mean'] - t_air
+    df.loc[:, 'tleaf q90 - tair'] = df['tleaf q90'] - t_air
+
+    df.to_csv(cfg.path_output_dir / f'tleaf_at_{hour}h.csv', index=False, sep=';', decimal='.')
+
+    pass
+
+
 def plot_mockup(hour: int, path_output_dir: Path):
     for i, plant in enumerate(PLANT_IDS):
         pth = path_output_dir / plant / f'mtg20190628{hour:02d}0000.pckl'
@@ -312,6 +344,7 @@ if __name__ == '__main__':
     weather_input = weather_input[weather_input.index.date == date(2019, 6, 28)]
 
     plot_temperature_vs_light(weather=weather_input)
+    get_temperature_infos(hour=16, weather=weather_input)
     plot_reponse_to_temperature()
     plot_canopy_absorbed_irradiance(weather=weather_input)
 
