@@ -61,7 +61,7 @@ def plot_canopy_absorbed_irradiance(weather: DataFrame):
 
 
 def plot_property(weather: DataFrame, path_output_dir: Path, prop: str, prop2: str = None):
-    fig, axs = pyplot.subplots(nrows=4, ncols=6, sharex='all', sharey='all', figsize=(15, 9.6))
+    fig, axs = pyplot.subplots(nrows=6, ncols=4, sharex='all', sharey='all', figsize=(18 / 2.54, 20 / 2.54))
 
     for hour, ax in enumerate(axs.flatten()):
         w = weather[weather.index == f'2019-06-28 {hour:02d}:00']
@@ -78,32 +78,39 @@ def plot_property(weather: DataFrame, path_output_dir: Path, prop: str, prop2: s
             air_temperature += t_air
             ax, im = plot_property_map(prop=prop, g=g, ax=ax, prop2='gs')
 
-        x_text = 0.9 if hour in (list(range(10)) + list(range(21, 24))) else 0.1
+        x_text = 0.92 if hour in (list(range(10)) + list(range(21, 24))) else 0.08
         align_text = 'right' if hour in (list(range(10)) + list(range(21, 24))) else 'left'
 
-        ax.text(0.75, 0.9, f'{hour:02d}:00', transform=ax.transAxes)
-        ax.text(x_text, 0.1, f'VPDa={vpd_air:.1f}', transform=ax.transAxes, horizontalalignment=align_text)
-        ax.text(x_text, 0.2, f'Rg={w["Rg"].iloc[0]:.0f}', transform=ax.transAxes, horizontalalignment=align_text)
+        ax.text(0.7, 0.8, f'{hour:02d}:00', transform=ax.transAxes, fontsize=8)
+        ax.text(x_text, 0.1, f'VPDa={vpd_air:.1f}', transform=ax.transAxes, horizontalalignment=align_text, fontsize=8)
+        ax.text(x_text, 0.2, f'Rg={w["Rg"].iloc[0]:.0f}', transform=ax.transAxes, horizontalalignment=align_text,
+                fontsize=8)
         if prop == 'Tlc':
             ax.xaxis.grid(True, which='minor')
             ax.xaxis.set_minor_locator(MultipleLocator(5))
             height, air_temperature = zip(*sorted(zip(height, air_temperature)))
             ax.plot(air_temperature, height, 'r-', label='air')
 
-    axs[-1, 2].set(xlabel=DEFAULT_LABELS[prop])
-    axs[-1, 2].xaxis.set_label_coords(1.1, -0.2, transform=axs[-1, 2].transAxes)
-    axs[1, 0].set(ylabel='Leaf height [cm]', ylim=[0, axs[1, 0].get_ylim()[-1]])
-    axs[-1, 2].xaxis.set_label_coords(1.1, -0.2, transform=axs[-1, 2].transAxes)
-    axs[1, 0].yaxis.set_label_coords(-0.325, 0, transform=axs[1, 0].transAxes)
-    axs[-1, -1].legend(loc='center right')
+    axs[-1, 1].set(xlabel=DEFAULT_LABELS[prop])
+    axs[-1, 1].xaxis.set_label_coords(1.1, -0.35, transform=axs[-1, 1].transAxes)
+    axs[2, 0].set(ylabel='Leaf height (cm)', ylim=[0, 1.05 * axs[2, 0].get_ylim()[-1]])
+    axs[2, 0].yaxis.set_label_coords(-0.4, 0, transform=axs[2, 0].transAxes)
+    axs[-1, -1].legend(loc='center right', fontsize=8)
     if prop2 is not None:
+        var_name_unit = DEFAULT_LABELS[prop2]
+        var_name = r'$\mathregular{' + var_name_unit.split('$\\mathregular{')[1].split('(')[0].replace('\\/', '') + '}$'
+        var_unit = r'$\mathregular{(' + var_name_unit.split('$\\mathregular{')[1].split('(')[1].split(')')[0] + ')}$'
+
         cbar_ax = inset_axes(axs[-1, 0], width="30%", height="5%", loc=2)
-        fig.colorbar(im, cax=cbar_ax, label=DEFAULT_LABELS[prop2], orientation='horizontal')
+        cb = fig.colorbar(im, cax=cbar_ax, label=var_name_unit, orientation='horizontal')
+        # cb.set_label(label='\n'.join((var_name, var_unit)), size='small', weight=8)
+        cb.set_label(label=var_name, size='small', weight=8)
+        cb.ax.tick_params(labelsize=8)
 
     scenario = path_output_dir.name
     fig.suptitle(scenario)
     fig.tight_layout()
-    fig.savefig(path_output_dir.parent / f'{prop}_{prop2}_{scenario}.png')
+    save_fig(fig=fig, fig_name=f'{prop}_{prop2}_{scenario}', fig_path=path_output_dir.parent)
 
     pass
 
