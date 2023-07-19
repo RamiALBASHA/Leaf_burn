@@ -40,20 +40,22 @@ def plot_leaf_temperature_profile(id_plant, g: MTG, ax: pyplot.Subplot) -> pyplo
 
 
 def plot_canopy_absorbed_irradiance(weather: DataFrame):
-    fig, ax = pyplot.subplots()
-    ax.plot(*zip(*enumerate(weather['Rg'].values)), 'k-', label='incident')
+    fig, axs = pyplot.subplots(ncols=2, sharex='all', sharey='all', figsize=(18 / 2.54, 9 / 2.54))
 
-    for expo_id, _ in cfg.expositions:
+    for ax, (expo_id, _) in zip(axs, cfg.expositions):
         path_output_dir = cfg.path_output_dir / expo_id / list(cfg.scenarios.keys())[0] / 'tvar_uvar'
+        ax.plot(weather['Rg'].index.hour, weather['Rg'].values, 'k-', label='incident')
 
         for i, plant in enumerate(PLANT_IDS):
             res = read_csv(path_output_dir / plant / f'time_series.csv', sep=';', decimal='.')
             ax.plot(*zip(*enumerate(res['Rg'])), marker='None', color='grey', alpha=0.5, label='absorbed')
-        handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles=handles[:2], labels=labels[:2])
-        ax.set(xlabel='local hour', ylabel=r'$\mathregular{(W\/m^{-2}_{ground}})}$')
-        fig.tight_layout()
-        fig.savefig(cfg.path_output_dir / expo_id / 'irradiance.png')
+    handles, labels = axs[0].get_legend_handles_labels()
+    axs[0].legend(handles=handles[:2], labels=labels[:2])
+    axs[0].set(xlabel='Hour of the day', ylabel=r'$\mathregular{(W\/m^{-2}_{ground}})}$')
+    axs[0].xaxis.set_label_coords(1.1, -0.2, transform=axs[0].transAxes)
+
+    fig.tight_layout()
+    save_fig(fig=fig, fig_name='irradiance', fig_path=cfg.path_output_dir)
 
     pass
 
