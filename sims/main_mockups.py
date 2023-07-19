@@ -9,7 +9,6 @@ from openalea.plantgl.all import Viewer
 from openalea.plantgl.scenegraph import Scene
 from pandas import read_csv, to_datetime
 
-from config import Pot
 from leaf_burn import funcs
 from sims import config
 
@@ -50,7 +49,7 @@ if __name__ == '__main__':
     element_colors.update({'other': (0, 0, 0)})
     for f in ('all_pots_demo', 'all_pots'):
         g, _ = funcs.build_mtg(path_file=path_digit / f'{f}.csv', is_show_scene=True)
-        g = funcs.add_pots(g=g, pot=Pot())
+        g = funcs.add_pots(g=g, pot=config.Pot())
         scene = visu(g, elmnt_color_dict=element_colors, scene=Scene(), view_result=True)
         Viewer.saveSnapshot(str(path_digit / f'{f}.png'))
         show_the_sun(mtg_obj=g, name=f)
