@@ -3,12 +3,13 @@ from itertools import product
 from math import pi
 from pathlib import Path
 from pickle import load
+from typing import Union
 
 import openalea.plantgl.all as pgl
 from hydroshoot.architecture import get_leaves, load_mtg, slim_cylinder
 from hydroshoot.display import DEFAULT_LABELS, visu, DEFAULT_COLORS
 from hydroshoot.utilities import vapor_pressure_deficit
-from matplotlib import pyplot
+from matplotlib import pyplot, figure
 from matplotlib.ticker import MultipleLocator
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from numpy import mean, quantile
@@ -106,8 +107,11 @@ def plot_property(weather: DataFrame, path_output_dir: Path, prop: str, prop2: s
 
 
 def plot_reponse_to_temperature():
-    fig, axs = pyplot.subplots(ncols=2, sharex='all')
+    fig, axs = pyplot.subplots(ncols=2, sharex='all', figsize=(18 / 2.54, 9 / 2.54))
 
+    temperature = []
+    photosynthesis = []
+    stomatal_conductance = []
     for expo_id, _ in cfg.expositions:
         for scen in cfg.scenarios.keys():
             for is_cst_t, is_cst_w in product((True, False), (True, False)):
@@ -118,16 +122,19 @@ def plot_reponse_to_temperature():
                         pth = path_output_dir / plant / f'mtg20190628{hour:02d}0000.pckl'
                         with open(pth, mode='rb') as f:
                             g, _ = load(f)
-                        axs[0].scatter(*zip(*[(g.node(vid).Tlc, g.node(vid).An) for vid in get_leaves(g)]), marker='.',
-                                       c='r')
-                        axs[1].scatter(*zip(*[(g.node(vid).Tlc, g.node(vid).gs) for vid in get_leaves(g)]), marker='.',
-                                       c='r')
-            axs[0].set(xlabel='leaf temperature (°C)',
-                       ylabel=' '.join(['Net carbon assimilation', r"$\mathregular{(\mu mol\/m^{-2}\/s^{-1})}$"]))
-            axs[1].set(xlabel='leaf temperature (°C)',
-                       ylabel=' '.join(['Stomatal conductance', r"$\mathregular{(mol\/m^{-2}\/s^{-1})}$"]))
+                        res = list(zip(*[(g.node(vid).Tlc, g.node(vid).An, g.node(vid).gs) for vid in get_leaves(g)]))
+                        temperature += res[0]
+                        photosynthesis += res[1]
+                        stomatal_conductance += res[2]
+
+    axs[0].scatter(temperature, photosynthesis, marker='.', c='r')
+    axs[0].set(xlabel='leaf temperature (°C)',
+               ylabel='\n'.join(['Net carbon assimilation', r"$\mathregular{(\mu mol\/m^{-2}\/s^{-1})}$"]))
+    axs[1].scatter(temperature, stomatal_conductance, marker='.', c='r')
+    axs[1].set(xlabel='leaf temperature (°C)',
+               ylabel='\n'.join(['Stomatal conductance', r"$\mathregular{(mol\/m^{-2}\/s^{-1})}$"]))
     fig.tight_layout()
-    fig.savefig(cfg.path_output_dir / 'an_vs_tleaf.png')
+    save_fig(fig=fig, fig_name='an_vs_tleaf', fig_path=cfg.path_output_dir)
 
     pass
 
@@ -166,8 +173,7 @@ def plot_temperature_vs_light(weather: DataFrame):
     # hls, lbs = axs[-1, -1].get_legend_handles_labels()
     axs[-1, -1].legend(fontsize=8)
     fig.tight_layout()
-    for fmt in ('png', 'eps', 'svg', 'pdf'):
-        fig.savefig(cfg.path_output_dir / f'tleaf_vs_ppfd.{fmt}', format=fmt, dpi=1200)
+    save_fig(fig=fig, fig_name='tleaf_vs_ppfd', fig_path=cfg.path_output_dir)
 
     df = DataFrame(dict(ppfd=ppfd_tot[16], tleaf=tleaf_tot[16]), index=range(len(ppfd_tot[16])))
     df.sort_values(by='ppfd', inplace=True)
@@ -334,6 +340,13 @@ def plot_scene(hour: int, scenario_stomatal_behavior: str, path_output_dir: Path
         fig.savefig(str(path_output_dir / 'cbar.png'))
         pgl.Viewer.saveSnapshot(str(path_output_dir / 'mkp.png'))
 
+    pass
+
+
+def save_fig(fig: figure.Figure, fig_name: str, fig_path: Path,
+             formats: Union[str, tuple[str]] = ('png', 'svg', 'eps', 'pdf')):
+    for fmt in formats:
+        fig.savefig(fig_path / f'{fig_name}.{fmt}', format=fmt, dpi=1200)
     pass
 
 
