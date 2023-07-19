@@ -131,6 +131,51 @@ def plot_reponse_to_temperature():
     pass
 
 
+def plot_temperature_vs_light(weather: DataFrame):
+    fig, axs = pyplot.subplots(ncols=4, nrows=6, sharex='all', sharey='all', figsize=(18 / 2.5, 20 / 2.54))
+
+    ppfd_tot = {hour: [] for hour in range(24)}
+    tleaf_tot = {hour: [] for hour in range(24)}
+    for expo_id, _ in cfg.expositions:
+        for scen in cfg.scenarios.keys():
+            for is_cst_t, is_cst_w in ((False, False),):
+                path_output_dir = cfg.path_output_dir / expo_id / scen / (
+                    f"{'tcst' if is_cst_t else 'tvar'}_{'ucst' if is_cst_w else 'uvar'}")
+                for ax, hour in zip(axs.flatten(), range(24)):
+                    for i, plant in enumerate(PLANT_IDS):
+                        pth = path_output_dir / plant / f'mtg20190628{hour:02d}0000.pckl'
+                        with open(pth, mode='rb') as f:
+                            g, _ = load(f)
+                        ppfd, tleaf = zip(*[(g.node(vid).Eabs, g.node(vid).Tlc) for vid in get_leaves(g)])
+                        ppfd_tot[hour] += ppfd
+                        tleaf_tot[hour] += tleaf
+
+    for ax, hour in zip(axs.flatten(), range(24)):
+        w = weather[weather.index == f'2019-06-28 {hour:02d}:00']
+        ax.hlines(w['Tac'].iloc[0], 0, 2000, color='b', linestyles='--', label='air')
+        ax.scatter(ppfd_tot[hour], tleaf_tot[hour], marker='.', c='r', label='leaf')
+
+    [ax.text(0.65, 0.1, f'{hour:02d}:00', transform=ax.transAxes) for (hour, ax) in zip(range(24), axs.flatten())]
+    axs[3, 0].set(ylabel="Temperature (°C)")
+    axs[3, 0].yaxis.set_label_coords(-.3, 1.0, transform=axs[3, 0].transAxes)
+
+    axs[-1, 1].set(xlabel=' '.join(['Absorbed irradiance', r"$\mathregular{(\mu mol_{photon}\/m^{-2}\/s^{-1})}$"]))
+    axs[-1, 1].xaxis.set_label_coords(1.05, -0.35, transform=axs[-1, 1].transAxes)
+
+    # hls, lbs = axs[-1, -1].get_legend_handles_labels()
+    axs[-1, -1].legend(fontsize=8)
+    fig.tight_layout()
+    for fmt in ('png', 'eps', 'svg', 'pdf'):
+        fig.savefig(cfg.path_output_dir / f'tleaf_vs_ppfd.{fmt}', format=fmt, dpi=1200)
+
+    df = DataFrame(dict(ppfd=ppfd_tot[16], tleaf=tleaf_tot[16]), index=range(len(ppfd_tot[16])))
+    df.sort_values(by='ppfd', inplace=True)
+    print(f"max tleaf of shaded leaves = {df[df['ppfd'] < 100]['tleaf'].max():.1f} °C at 16:00")
+    print(f"max tleaf of sunlit leaves = {df['tleaf'].max():.1f} °C at 16:00")
+
+    pass
+
+
 def plot_temperature_profile(hour: int, path_output_dir: Path, weather: DataFrame, prop='Tlc', prop2='gs'):
     fig, ax = pyplot.subplots()
 
@@ -266,6 +311,7 @@ if __name__ == '__main__':
     weather_input.index = to_datetime(weather_input.index)
     weather_input = weather_input[weather_input.index.date == date(2019, 6, 28)]
 
+    plot_temperature_vs_light(weather=weather_input)
     plot_reponse_to_temperature()
     plot_canopy_absorbed_irradiance(weather=weather_input)
 
