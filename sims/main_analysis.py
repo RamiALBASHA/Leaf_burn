@@ -287,7 +287,7 @@ def plot_mockup(hour: int, path_output_dir: Path):
                 mesh = pgl.Translated(pgl.Vector3([-x_base, -y_base, 0.0]), mesh)
                 g.node(v).geometry = mesh
 
-        scene = visu(g, plot_prop='Tlc', min_value=35, max_value=60)
+        scene = visu(g, plot_prop='Tlc', min_value=35, max_value=55)
         pgl.Viewer.saveSnapshot(str(path_output_dir / f'{plant}_mkp.png'))
     pass
 
