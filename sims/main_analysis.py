@@ -51,7 +51,7 @@ def plot_canopy_absorbed_irradiance(weather: DataFrame):
             ax.plot(*zip(*enumerate(res['Rg'])), marker='None', color='grey', alpha=0.5, label='absorbed')
     handles, labels = axs[0].get_legend_handles_labels()
     axs[0].legend(handles=handles[:2], labels=labels[:2])
-    axs[0].set(xlabel='Hour of the day', ylabel=r'$\mathregular{(W\/m^{-2}_{ground}})}$')
+    axs[0].set(xlabel='Solar hour', ylabel=r'$\mathregular{(W\/m^{-2}_{ground}})}$')
     axs[0].xaxis.set_label_coords(1.1, -0.2, transform=axs[0].transAxes)
 
     fig.tight_layout()
@@ -184,10 +184,11 @@ def plot_temperature_vs_light(weather: DataFrame):
     fig.tight_layout()
     save_fig(fig=fig, fig_name='tleaf_vs_ppfd', fig_path=cfg.path_output_dir)
 
-    df = DataFrame(dict(ppfd=ppfd_tot[16], tleaf=tleaf_tot[16]), index=range(len(ppfd_tot[16])))
+    h = 15
+    df = DataFrame(dict(ppfd=ppfd_tot[h], tleaf=tleaf_tot[h]), index=range(len(ppfd_tot[h])))
     df.sort_values(by='ppfd', inplace=True)
-    print(f"max tleaf of shaded leaves = {df[df['ppfd'] < 100]['tleaf'].max():.1f} °C at 16:00")
-    print(f"max tleaf of sunlit leaves = {df['tleaf'].max():.1f} °C at 16:00")
+    print(f"max tleaf of shaded leaves = {df[df['ppfd'] < 100]['tleaf'].max():.1f} °C at {h:02d}:00")
+    print(f"max tleaf of sunlit leaves = {df['tleaf'].max():.1f} °C at {h:02d}:00")
 
     pass
 
@@ -376,7 +377,7 @@ if __name__ == '__main__':
 
     for expo_id, _ in cfg.expositions:
         plot_temperature_profile(
-            hour=16,
+            hour=15,
             path_output_dir=cfg.path_output_dir / expo_id / 'intermediate' / 'tvar_uvar',
             weather=weather_input,
             prop='Tlc',
