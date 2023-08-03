@@ -371,7 +371,7 @@ if __name__ == '__main__':
     weather_input = weather_input[weather_input.index.date == date(2019, 6, 28)]
 
     plot_temperature_vs_light(weather=weather_input)
-    get_temperature_infos(hour=16, weather=weather_input)
+    get_temperature_infos(hour=15, weather=weather_input)
     plot_reponse_to_temperature()
     plot_canopy_absorbed_irradiance(weather=weather_input)
 
