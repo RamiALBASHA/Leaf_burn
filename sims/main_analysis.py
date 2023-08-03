@@ -384,7 +384,7 @@ if __name__ == '__main__':
             prop2='gs')
 
     plot_scene(
-        hour=16,
+        hour=15,
         scenario_stomatal_behavior='intermediate',
         path_output_dir=cfg.path_output_dir.parent)
 
