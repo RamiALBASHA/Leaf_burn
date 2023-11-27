@@ -8,7 +8,6 @@ from typing import Iterable
 from hydroshoot import io, display
 from hydroshoot.architecture import mtg_save_geometry, save_mtg
 from openalea.plantgl.scenegraph import Scene
-from pandas import read_csv, DataFrame
 
 from config import Config
 from leaf_burn import funcs, initialisation_twins
@@ -17,11 +16,9 @@ from leaf_burn.utils import copy_mtg, extract_mtg
 cfg = Config()
 
 
-def run_preprocess(id_plant: str, df: DataFrame, exposition: list):
+def run_preprocess(id_plant: str, exposition: list):
     path_digit = cfg.path_digit / f'digit_{id_plant}.csv'
     exposition_id, row_angle_with_south = exposition
-
-    df[df["Plant"].apply(lambda x: x.startswith(id_plant))].to_csv(path_digit, sep=';', decimal='.', index=False)
 
     g, scene = funcs.build_mtg(path_file=path_digit, is_show_scene=False)
     # g = funcs.add_pots(g=g, pot=Pot())
@@ -100,12 +97,9 @@ def mp(sim_args: Iterable, nb_cpu: int = 2):
 if __name__ == '__main__':
     path_root = Path(__file__).parent.resolve()
 
-    digit_df = read_csv(cfg.path_digit / 'all_pots.csv', sep=';', decimal='.', header=0)
-    # names_plant = set([" ".join(re.findall("[a-zA-Z]+", s)) for s in digit_df['Plant'].unique()])
     names_plant = ['belledenise', 'plantdec', 'poulsard', 'raboso', 'salice']
 
-    # run_preprocess(id_plant=list(names_plant)[0])
     time_on = datetime.now()
-    mp(sim_args=product(names_plant, [digit_df], cfg.expositions), nb_cpu=12)
+    mp(sim_args=product(names_plant, cfg.expositions), nb_cpu=12)
     time_off = datetime.now()
     print(f"--- Total runtime: {(time_off - time_on).seconds} sec ---")
