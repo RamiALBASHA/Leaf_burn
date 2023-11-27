@@ -358,7 +358,7 @@ def plot_scene(hour: int, scenario_stomatal_behavior: str, path_output_dir: Path
 
 
 def save_fig(fig: figure.Figure, fig_name: str, fig_path: Path,
-             formats: Union[str, tuple[str]] = ('png', 'svg', 'eps', 'pdf')):
+             formats: Union[str, tuple[str]] = ('png', )):
     for fmt in formats:
         fig.savefig(fig_path / f'{fig_name}.{fmt}', format=fmt, dpi=1200)
     pass
