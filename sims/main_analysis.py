@@ -341,11 +341,11 @@ def plot_scene(hour: int, scenario_stomatal_behavior: str, path_output_dir: Path
                         mesh = pgl.Translated(pgl.Vector3([dx + (i_pos - 3) * 65, dy, 0.0]), mesh)
                         g.node(v).geometry = mesh
 
-                scene = visu(g, plot_prop='Tlc', min_value=35, max_value=55, scene=scene)
+                scene = visu(g, plot_prop='Tlc', min_value=35, max_value=55, scene=scene, cmap='gnuplot')
                 pyplot.close()
 
             if plant == PLANT_IDS[0]:
-                scene = visu(g, plot_prop='Tlc', min_value=35, max_value=55, scene=scene)
+                scene = visu(g, plot_prop='Tlc', min_value=35, max_value=55, scene=scene, cmap='gnuplot')
         fig = pyplot.figure(1)
         cbar_ax = fig.get_axes()[0]
         cbar_ax.set_xlabel('Leaf temperature (°C)')
