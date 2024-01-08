@@ -1,5 +1,6 @@
 # Leaf_burn
-Simulating canopy temperature in grapevine during heat wave
+Simulating the canopy temperature of potted grapevines during the heat wave of June 28th 2019. The results are published in a paper entitled "Clusters of grapevine genes in a burning world" in the New Phytologist journal by (Coupel-Ledru et al. (2024))[https://doi.org/10.1111/nph.19540].
+
 
 # Installation
 
